@@ -17,6 +17,8 @@ class ModelOptions(
     )
 
     class Animations(
-        val idle: String? = null
+        val idle: String? = null,
+        val open: String? = null,
+        val close: String? = null,
     )
 }

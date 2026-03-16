@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "id": "skiescrates",
+  "id": "bitecrates",
   "version": "${version}",
-  "name": "SkiesCrates",
+  "name": "BiteCrates",
   "description": "Crates Mod",
   "authors": [
     "Stampede"
   ],
   "entrypoints": {
     "main": [
-      "com.pokeskies.skiescrates.SkiesCrates"
+      "com.dawnshade.biteforce.bitecrates.core.BiteCrates"
     ]
   },
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": ">=1.21.1"
   },
-  "mixins": ["skiescrates.mixins.json"],
-  "accessWidener": "skiescrates.accesswidener"
+  "mixins": ["bitecrates.mixins.json"],
+  "accessWidener": "bitecrates.accesswidener"
 }

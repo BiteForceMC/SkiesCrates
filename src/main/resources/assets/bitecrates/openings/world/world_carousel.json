@@ -1,0 +1,22 @@
+{
+  "type": "CAROUSEL",
+  "radius": 1.5,
+  "height": 0.85,
+  "previewCount": 8,
+  "startDelay": 0,
+  "spinTicks": 50,
+  "slowTicks": 30,
+  "travelTicks": 16,
+  "orbitSpeed": 0.35,
+  "finalOrbitSpeed": 0.04,
+  "displaySpinSpeed": 12.0,
+  "orbitUpdateInterval": 3,
+  "travelUpdateInterval": 2,
+  "offset": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "centerMode": "CRATE",
+  "hideHologram": true
+}

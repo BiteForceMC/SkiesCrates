@@ -10,7 +10,7 @@
   },
   "unique": false,
   "preview": "default",
-  "animation": "world_orbital_elimination",
+  "animation": "world_random",
   "permission": "",
   "inventory_space": -1,
   "cost": {},
@@ -47,7 +47,18 @@
         }
       },
       "animations": {
-        "idle": "idle"
+        "idle": "idle",
+        "idleInterval": 40,
+        "timeline": [
+          {
+            "time": 0,
+            "animation": "open"
+          },
+          {
+            "time": 20,
+            "animation": "spin"
+          }
+        ]
       }
     },
     "hologram": {

@@ -1,63 +1,46 @@
 {
   "enabled": true,
-  "name": "<blue>Model Crate</blue>",
+  "name": "Example Crate",
   "display": {
     "item": "minecraft:chest",
-    "slots": [],
-    "amount": 1,
-    "name": "<blue>Model Crate",
-    "lore": "<gray>Example Lore!"
+    "name": "<red>Example Crate",
+    "lore": [
+      "<gray>Example Lore!"
+    ]
   },
   "unique": false,
   "preview": "default",
-  "animation": "world_orbital_elimination",
+  "animation": "enclosing",
   "permission": "",
   "inventory_space": -1,
-  "cost": {},
-  "cooldown": 0,
+  "cost": {
+    "provider": "IMPACTOR",
+    "currency": "impactor:dollars",
+    "amount": 100
+  },
+  "cooldown": 10,
+  "keys": {
+    "example_key": 1
+  },
   "failure": {
     "pushback": 0.5,
     "sound": {
       "sound": "minecraft:block.lava.extinguish",
-      "volume": 0.5,
-      "pitch": 1.0
+      "pitch": 1.0,
+      "volume": 0.5
     }
-  },
-  "keys": {
-    "unique_key": 1
   },
   "block": {
     "locations": [],
-    "model": {
-      "id": "example_model",
-      "rotation": 270.0,
-      "offset": {
-        "x": 0.0,
-        "y": -0.5,
-        "z": 0.0
-      },
-      "scale": 1.0,
-      "hitbox": {
-        "width": 1.0,
-        "height": 1.0,
-        "offset": {
-          "x": 0.0,
-          "y": -0.5,
-          "z": 0.0
-        }
-      },
-      "animations": {
-        "idle": "idle"
-      }
-    },
     "hologram": {
       "text": [
-        "<red>Model Crate",
-        "<gray>Example Lore!"
+        "<red>Example Crate",
+        "<gray>Example Lore!",
+        "Your Keys: %bitecrates:keys example_key%"
       ],
       "offset": {
         "x": 0.0,
-        "y": 1.5,
+        "y": 1.0,
         "z": 0.0
       },
       "scale": {
@@ -80,14 +63,14 @@
       "update_rate": 100,
       "view_distance": 50.0
     },
-    "particles": "helix"
+    "particles": "spiral"
   },
   "rewards": {
     "example_reward": {
-      "type": "COMMAND_CONSOLE",
+      "type": "ITEM",
       "weight": 2,
       "name": "<red>Example Reward</red>",
-      "display": {
+      "item": {
         "item": "minecraft:diamond",
         "name": "<red>Example Reward",
         "lore": [
@@ -96,10 +79,7 @@
         "nbt": {
           "minecraft:custom_model_data": 1
         }
-      },
-      "commands": [
-        "give %player% diamond 1"
-      ]
+      }
     },
     "example_reward_2": {
       "type": "COMMAND_CONSOLE",
@@ -109,7 +89,7 @@
         "item": "minecraft:emerald",
         "name": "<green><b>Emerald",
         "lore": [
-          "<gray>Example Lore!"
+        "<gray>Example Lore!"
         ]
       },
       "commands": [

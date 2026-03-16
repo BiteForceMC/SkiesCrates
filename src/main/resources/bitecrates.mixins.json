@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.dawnshade.biteforce.bitecrates.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "EntityAccessor",
+    "ItemEntityAccessor",
+    "TextDisplayAccessor",
+    "ServerGamePacketListenerImplMixin",
+    "ViewerHandlerAccessor",
+    "ViewerHandlerMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "plugin": "com.dawnshade.biteforce.bitecrates.mixin.CratesMixinPlugin"
+}

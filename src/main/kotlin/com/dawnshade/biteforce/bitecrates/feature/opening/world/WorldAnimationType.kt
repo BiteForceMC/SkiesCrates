@@ -1,11 +1,11 @@
-package com.pokeskies.skiescrates.data.opening.world
+package com.dawnshade.biteforce.bitecrates.feature.opening.world
 
-import com.pokeskies.skiescrates.data.opening.world.types.SimpleRollWorldAnimation
-import com.pokeskies.skiescrates.data.opening.world.types.OrbitalEliminationWorldAnimation
+import com.dawnshade.biteforce.bitecrates.feature.opening.world.types.SimpleRollWorldAnimation
+import com.dawnshade.biteforce.bitecrates.feature.opening.world.types.CarouselWorldAnimation
 
 enum class WorldAnimationType(val identifier: String, val clazz: Class<*>) {
     SIMPLE_ROLL("simple_roll", SimpleRollWorldAnimation::class.java),
-    ORBITAL_ELIMINATION("orbital_elimination", OrbitalEliminationWorldAnimation::class.java);
+    CAROUSEL("carousel", CarouselWorldAnimation::class.java);
 
     companion object {
         fun valueOfAnyCase(name: String): WorldAnimationType? {
