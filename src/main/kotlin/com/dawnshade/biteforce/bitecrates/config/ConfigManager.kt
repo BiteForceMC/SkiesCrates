@@ -11,14 +11,18 @@ import com.dawnshade.biteforce.bitecrates.feature.particle.ParticleAnimationOpti
 import com.dawnshade.biteforce.bitecrates.data.previews.Preview
 import com.dawnshade.biteforce.bitecrates.util.Utils
 import java.io.*
+import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.stream.Collectors
 
 object ConfigManager {
     private var assetPackage = "assets/${BiteCrates.MOD_ID}"
+    private val crateFilePaths: MutableMap<String, String> = mutableMapOf()
 
     lateinit var CONFIG: BiteCratesConfig
     lateinit var CRATES: MutableMap<String, Crate>
@@ -61,11 +65,13 @@ object ConfigManager {
 
     private fun loadCrates() {
         CRATES = mutableMapOf()
+        crateFilePaths.clear()
 
         val dir = BiteCrates.INSTANCE.configDir.resolve("crates")
         if (dir.exists() && dir.isDirectory) {
             val files = Files.walk(dir.toPath())
                 .filter { path: Path -> Files.isRegularFile(path) }
+                .sorted()
                 .map { it.toFile() }
                 .collect(Collectors.toList())
             if (files != null) {
@@ -75,12 +81,22 @@ object ConfigManager {
                     val fileName = file.name
                     if (file.isFile && fileName.contains(".json")) {
                         val id = fileName.substring(0, fileName.lastIndexOf(".json"))
+                        if (CRATES.containsKey(id)) {
+                            val loadedPath = crateFilePaths[id] ?: "unknown"
+                            Utils.printError("Duplicate crate id '$id' found in '${file.path}'. Already loaded from '$loadedPath'. Skipping duplicate file.")
+                            continue
+                        }
                         val jsonReader = JsonReader(InputStreamReader(FileInputStream(file), Charsets.UTF_8))
                         try {
                             val config = BiteCrates.INSTANCE.gsonPretty.fromJson(JsonParser.parseReader(jsonReader), Crate::class.java)
                             if (config.enabled) {
                                 config.id = id
                                 CRATES[id] = config
+                                val relativePath = BiteCrates.INSTANCE.configDir.toPath()
+                                    .relativize(file.toPath())
+                                    .toString()
+                                    .replace('\\', '/')
+                                crateFilePaths[id] = relativePath
                                 enabledFiles.add(fileName)
                             } else {
                                 Utils.printError("Crate $fileName is disabled, skipping...")
@@ -296,15 +312,16 @@ object ConfigManager {
         val file = File(dir, filename)
         var value: T = default
         try {
-            Files.createDirectories(BiteCrates.INSTANCE.configDir.toPath())
+            Files.createDirectories(dir.toPath())
             if (file.exists()) {
-                FileReader(file).use { reader ->
+                Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8).use { reader ->
                     val jsonReader = JsonReader(reader)
                     value = BiteCrates.INSTANCE.gsonPretty.fromJson(jsonReader, default::class.java)
                 }
             } else if (create) {
+                file.parentFile?.let { Files.createDirectories(it.toPath()) }
                 Files.createFile(file.toPath())
-                FileWriter(file).use { fileWriter ->
+                Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { fileWriter ->
                     fileWriter.write(BiteCrates.INSTANCE.gsonPretty.toJson(default))
                     fileWriter.flush()
                 }
@@ -316,29 +333,55 @@ object ConfigManager {
     }
 
     fun <T> saveFile(filename: String, `object`: T): Boolean {
-        val dir = BiteCrates.INSTANCE.configDir
-        val file = File(dir, filename)
+        val filePath = BiteCrates.INSTANCE.configDir.resolve(filename).toPath()
+        var tempFile: Path? = null
         try {
-            FileWriter(file).use { fileWriter ->
+            val parentPath = filePath.parent ?: BiteCrates.INSTANCE.configDir.toPath()
+            Files.createDirectories(parentPath)
+
+            tempFile = Files.createTempFile(parentPath, "${filePath.fileName}.", ".tmp")
+            Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { fileWriter ->
                 fileWriter.write(BiteCrates.INSTANCE.gsonPretty.toJson(`object`))
                 fileWriter.flush()
+            }
+
+            try {
+                Files.move(tempFile, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(tempFile, filePath, StandardCopyOption.REPLACE_EXISTING)
             }
         } catch (e: Exception) {
             BiteCrates.LOGGER.error("Failed to save config file {}", filename, e)
             return false
+        } finally {
+            tempFile?.let { path ->
+                if (Files.exists(path)) {
+                    runCatching { Files.delete(path) }
+                }
+            }
         }
+        return true
+    }
+
+    fun saveCrate(crate: Crate): Boolean {
+        val targetPath = crateFilePaths[crate.id] ?: "crates/${crate.id}.json"
+        if (!saveFile(targetPath, crate)) {
+            return false
+        }
+        crateFilePaths[crate.id] = targetPath
         return true
     }
 
     private fun attemptDefaultFileCopy(classLoader: ClassLoader, fileName: String) {
         val file = BiteCrates.INSTANCE.configDir.resolve(fileName)
         if (!file.exists()) {
-            file.mkdirs()
+            file.parentFile?.mkdirs()
             try {
                 val stream = classLoader.getResourceAsStream("${assetPackage}/$fileName")
                     ?: throw NullPointerException("File not found $fileName")
-
-                Files.copy(stream, file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                stream.use {
+                    Files.copy(it, file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
             } catch (e: Exception) {
                 Utils.printError("Failed to copy the default file '$fileName': $e")
             }
@@ -361,6 +404,7 @@ object ConfigManager {
                             
                             destinationFile.mkdirs()
                         } else {
+                            destinationFile.parentFile?.mkdirs()
                             
                             Files.copy(sourceFile, destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
                         }

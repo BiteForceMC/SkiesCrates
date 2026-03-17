@@ -7,6 +7,8 @@ class BiteCratesConfig(
     var debug: Boolean = false,
     @SerializedName("interaction_limiter")
     var interactionLimiter: Long = 1000,
+    @SerializedName("max_openers_per_crate")
+    var maxOpenersPerCrate: Int = 1,
     var storage: Storage = Storage(),
     var keys: KeyOptions = KeyOptions(),
     var migration: MigrationOptions = MigrationOptions(),
@@ -56,6 +58,6 @@ class BiteCratesConfig(
     }
 
     override fun toString(): String {
-        return "BiteCratesConfig(debug=$debug, interactionLimiter=$interactionLimiter, storage=$storage, keys=$keys, migration=$migration, webhooks=$webhooks)"
+        return "BiteCratesConfig(debug=$debug, interactionLimiter=$interactionLimiter, maxOpenersPerCrate=$maxOpenersPerCrate, storage=$storage, keys=$keys, migration=$migration, webhooks=$webhooks)"
     }
 }

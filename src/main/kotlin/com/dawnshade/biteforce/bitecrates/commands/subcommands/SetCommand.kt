@@ -73,16 +73,25 @@ class SetCommand : SubCommand {
                 ctx.source.sendMessage(TextUtils.toComponent("<red>This block is already set as a ${crate.name} crate!"))
                 return 0
             }
+            if (crate.block.locations.any { it.equalsDimBlockPos(dimPos) }) {
+                ctx.source.sendMessage(TextUtils.toComponent("<red>This block is already configured as a ${crate.name} crate location!"))
+                return 0
+            }
 
             val blockLocation = CrateBlockLocation(dimPos.dimension, dimPos.x, dimPos.y, dimPos.z)
             crate.block.locations.add(blockLocation)
 
-            if (!ConfigManager.saveFile("crates/${crateId}.json", crate)) {
+            if (!ConfigManager.saveCrate(crate)) {
+                crate.block.locations.remove(blockLocation)
                 ctx.source.sendMessage(Component.text("Failed to save crate data! Check the console for additional errors...", NamedTextColor.RED))
                 return 0
             }
 
             val instance = CratesManager.loadCrateLocation(crate, blockLocation) ?: run {
+                crate.block.locations.remove(blockLocation)
+                if (!ConfigManager.saveCrate(crate)) {
+                    ctx.source.sendMessage(Component.text("Failed to rollback crate data after load failure! Check the console for additional errors...", NamedTextColor.RED))
+                }
                 ctx.source.sendMessage(Component.text("Failed to load crate location! Check the console for additional errors...", NamedTextColor.RED))
                 return 0
             }

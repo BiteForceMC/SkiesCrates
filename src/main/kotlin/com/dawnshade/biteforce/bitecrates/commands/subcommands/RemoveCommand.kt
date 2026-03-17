@@ -58,22 +58,32 @@ class RemoveCommand : SubCommand {
                 return 0
             }
 
-            
-            CratesManager.getCrateFromPos(dimPos)?.let {
-                CratesManager.unloadCrateLocation(it)
-            }
-
             var removed = 0
+            val loadedInstance = CratesManager.getCrateFromPos(dimPos)
+            val removedCrateIds = mutableSetOf<String>()
             for ((_, crate) in crateInstances) {
+                val removedLocations = crate.block.locations.filter { crateLoc ->
+                    crateLoc.equalsDimBlockPos(dimPos)
+                }
+                if (removedLocations.isEmpty()) {
+                    continue
+                }
+
                 crate.block.locations.removeAll { crateLoc ->
                     crateLoc.equalsDimBlockPos(dimPos)
                 }
-                if (!ConfigManager.saveFile("crates/${crate.id}.json", crate)) {
+                if (!ConfigManager.saveCrate(crate)) {
+                    crate.block.locations.addAll(removedLocations)
                     ctx.source.sendMessage(Component.text("Failed to save crate data for ${crate.id}! Check the console for additional errors...", NamedTextColor.RED))
                     continue
                 }
 
                 removed++
+                removedCrateIds += crate.id
+            }
+
+            if (loadedInstance != null && loadedInstance.crate.id in removedCrateIds) {
+                CratesManager.unloadCrateLocation(loadedInstance)
             }
 
             if (removed == 0) {

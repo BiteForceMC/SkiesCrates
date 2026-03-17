@@ -19,6 +19,7 @@ object Lang {
     
     var CRATE_GIVE = listOf("<green>You have received a %crate_name% crate!")
     var CRATE_OPENING = listOf("<green>Opening crate...")
+    var CRATE_OPENING_ALL = listOf("<green>Opening %open_amount%x %crate_name% crates...")
     var CRATE_REWARD = listOf("<green>You have received %reward_name% reward from the %crate_name% crate!")
     var CRATE_REWARD_BROADCAST = listOf("<green>%player% has received %reward_name% reward from the %crate_name% crate!")
 
@@ -30,6 +31,7 @@ object Lang {
     var ERROR_COST = listOf("<red>You don't have enough money to open this crate!")
     var ERROR_COOLDOWN = listOf("<red>You are on cooldown for this crate! Please wait %cooldown% before opening it again.")
     var ERROR_MISSING_KEYS = listOf("<red>You don't have enough keys to open this crate! Keys: %crate_keys%")
+    var ERROR_INVENTORY_SPACE_BULK = listOf("<red>You need %required_space% free inventory slots to open %open_amount%x crates (you have %available_space%).")
 
     
     var ERROR_NO_CRATE = listOf("<red>You do not have this crate in your inventory! Not sure how that happened...")
@@ -43,6 +45,7 @@ object Lang {
     var ERROR_ECONOMY_PROVIDER = listOf("<red>This crate has an invalid economy provider! Please contact an admin.")
     var ERROR_KEY_NOT_FOUND = listOf("<red>The specified keys for this crate were invalid! Please contact an admin.")
     var ERROR_STORAGE = listOf("<red>There was an error with the storage system! Please contact an admin.")
+    var ERROR_OPENING = listOf("<red>An unexpected error occurred while opening this crate. Any costs were refunded.")
 
     @OptIn(ExperimentalStdlibApi::class)
     fun init() {

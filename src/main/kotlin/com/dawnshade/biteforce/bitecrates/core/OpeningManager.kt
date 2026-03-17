@@ -1,16 +1,19 @@
 package com.dawnshade.biteforce.bitecrates.core
 
 import com.dawnshade.biteforce.bitecrates.config.ConfigManager
+import com.dawnshade.biteforce.bitecrates.config.Lang
 import com.dawnshade.biteforce.bitecrates.data.DimensionalBlockPos
 import com.dawnshade.biteforce.bitecrates.feature.opening.OpeningAnimation
 import com.dawnshade.biteforce.bitecrates.feature.opening.OpeningInstance
+import com.dawnshade.biteforce.bitecrates.feature.opening.world.WorldOpeningInstance
+import com.dawnshade.biteforce.bitecrates.util.TextUtils
 import com.dawnshade.biteforce.bitecrates.util.Utils
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 object OpeningManager {
     private val activeInstances: MutableMap<UUID, OpeningInstance> = ConcurrentHashMap()
-    private val activeWorldCrates: MutableSet<DimensionalBlockPos> = ConcurrentHashMap.newKeySet()
+    private val activeWorldCrates: MutableMap<DimensionalBlockPos, Int> = ConcurrentHashMap()
     private val animations: MutableMap<String, OpeningAnimation> = mutableMapOf()
 
     fun load() {
@@ -26,8 +29,24 @@ object OpeningManager {
     }
 
     fun tick() {
-        for ((_, instance) in activeInstances) {
-            instance.tick()
+        for (instance in activeInstances.values.toList()) {
+            runCatching { instance.tick() }.onFailure { ex ->
+                Utils.printError("Failed to tick opening for ${instance.player.name.string} on crate ${instance.crate.id}. Closing opening and refunding costs.")
+                BiteCrates.LOGGER.error("Failed to tick opening for {} on crate {}", instance.player.name.string, instance.crate.id, ex)
+
+                instance.chargeContext.refund()
+                Lang.ERROR_OPENING.forEach {
+                    instance.player.sendMessage(TextUtils.parseAllNative(instance.player, instance.crate.parsePlaceholders(it)))
+                }
+
+                removeInstance(instance.player.uuid)
+                runCatching { instance.stop() }.onFailure { stopEx ->
+                    BiteCrates.LOGGER.error("Failed to stop opening for {} on crate {}", instance.player.name.string, instance.crate.id, stopEx)
+                    if (instance is WorldOpeningInstance) {
+                        unlockWorldCrate(instance.instance.dimPos)
+                    }
+                }
+            }
         }
     }
 
@@ -53,11 +72,34 @@ object OpeningManager {
     }
 
     fun tryLockWorldCrate(position: DimensionalBlockPos): Boolean {
-        return activeWorldCrates.add(position)
+        val maxOpeners = ConfigManager.CONFIG.maxOpenersPerCrate
+        if (maxOpeners <= 0) {
+            return true
+        }
+
+        synchronized(activeWorldCrates) {
+            val currentOpeners = activeWorldCrates[position] ?: 0
+            if (currentOpeners >= maxOpeners) {
+                return false
+            }
+            activeWorldCrates[position] = currentOpeners + 1
+            return true
+        }
     }
 
     fun unlockWorldCrate(position: DimensionalBlockPos) {
-        activeWorldCrates.remove(position)
+        if (ConfigManager.CONFIG.maxOpenersPerCrate <= 0) {
+            return
+        }
+
+        synchronized(activeWorldCrates) {
+            val currentOpeners = activeWorldCrates[position] ?: return
+            if (currentOpeners <= 1) {
+                activeWorldCrates.remove(position)
+            } else {
+                activeWorldCrates[position] = currentOpeners - 1
+            }
+        }
     }
 
     fun registerAnimation(id: String, animation: OpeningAnimation) {

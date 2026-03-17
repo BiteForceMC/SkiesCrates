@@ -1,6 +1,7 @@
 {
   "debug": true,
   "interaction_limiter": 1000,
+  "max_openers_per_crate": 1,
   "keys": {
     "aliases": [
       "keys"
