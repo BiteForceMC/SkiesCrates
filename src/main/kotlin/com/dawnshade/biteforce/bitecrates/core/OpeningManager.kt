@@ -73,7 +73,7 @@ object OpeningManager {
 
     fun tryLockWorldCrate(position: DimensionalBlockPos): Boolean {
         val maxOpeners = ConfigManager.CONFIG.maxOpenersPerCrate
-        if (maxOpeners <= 0) {
+        if (maxOpeners <= 1) {
             return true
         }
 
@@ -88,7 +88,7 @@ object OpeningManager {
     }
 
     fun unlockWorldCrate(position: DimensionalBlockPos) {
-        if (ConfigManager.CONFIG.maxOpenersPerCrate <= 0) {
+        if (ConfigManager.CONFIG.maxOpenersPerCrate <= 1) {
             return
         }
 

@@ -9,6 +9,7 @@ import com.dawnshade.biteforce.bitecrates.data.Crate
 import com.dawnshade.biteforce.bitecrates.data.CrateInstance
 import com.dawnshade.biteforce.bitecrates.data.CrateOpenData
 import com.dawnshade.biteforce.bitecrates.data.DimensionalBlockPos
+import com.dawnshade.biteforce.bitecrates.feature.opening.OpeningAnimation
 import com.dawnshade.biteforce.bitecrates.feature.opening.OpenChargeContext
 import com.dawnshade.biteforce.bitecrates.feature.opening.inventory.InventoryOpeningAnimation
 import com.dawnshade.biteforce.bitecrates.feature.opening.inventory.InventoryOpeningInstance
@@ -289,6 +290,7 @@ object CratesManager {
     ): Boolean {
         var lockedWorldCratePos: DimensionalBlockPos? = null
         var openChargeContext: OpenChargeContext? = null
+        var configuredAnimation: OpeningAnimation? = null
 
         fun releaseWorldCrateLock() {
             lockedWorldCratePos?.let {
@@ -394,7 +396,7 @@ object CratesManager {
         }
 
             if (!forceInstantOpen && crate.animation.isNotEmpty()) {
-            val configuredAnimation = OpeningManager.getAnimation(crate.animation) ?: run {
+            configuredAnimation = OpeningManager.getAnimation(crate.animation) ?: run {
                 withContext(MinecraftDispatcher(player.server)) {
                     handleCrateFail(player, crate, openData)
                     Lang.ERROR_INVALID_ANIMATION.forEach {
@@ -654,7 +656,7 @@ object CratesManager {
                 return@withContext chargeContext.complete(listOf(reward))
             }
 
-            val animation = OpeningManager.getAnimation(crate.animation) ?: run {
+            val animationTemplate = configuredAnimation ?: OpeningManager.getAnimation(crate.animation) ?: run {
                 releaseWorldCrateLock()
                 chargeContext.refund()
                 handleCrateFail(player, crate, openData)
@@ -665,6 +667,7 @@ object CratesManager {
                 }
                 return@withContext false
             }
+            val animation = cloneOpeningAnimation(animationTemplate)
 
             val opening = when (animation) {
                 is InventoryOpeningAnimation -> {
@@ -736,7 +739,12 @@ object CratesManager {
         }
     }
 
-    private suspend fun openAllCratesWithKeys(player: ServerPlayer, crate: Crate, openData: CrateOpenData): Boolean {
+    private fun cloneOpeningAnimation(animation: OpeningAnimation): OpeningAnimation {
+        val serialized = BiteCrates.INSTANCE.gson.toJsonTree(animation)
+        return BiteCrates.INSTANCE.gson.fromJson(serialized, animation::class.java)
+    }
+
+    suspend fun openAllCratesWithKeys(player: ServerPlayer, crate: Crate, openData: CrateOpenData): Boolean {
         if (crate.keys.isEmpty()) {
             return openCrate(player, crate, openData, false)
         }

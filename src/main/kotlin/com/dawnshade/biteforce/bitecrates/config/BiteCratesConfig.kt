@@ -8,7 +8,7 @@ class BiteCratesConfig(
     @SerializedName("interaction_limiter")
     var interactionLimiter: Long = 1000,
     @SerializedName("max_openers_per_crate")
-    var maxOpenersPerCrate: Int = 1,
+    var maxOpenersPerCrate: Int = 0,
     @SerializedName("item_rewards_use_display_name")
     var itemRewardsUseDisplayName: Boolean = false,
     var storage: Storage = Storage(),

@@ -5,6 +5,7 @@ import com.dawnshade.biteforce.bitecrates.config.block.ModelOptions
 import com.dawnshade.biteforce.bitecrates.data.CrateInstance
 import com.dawnshade.biteforce.bitecrates.data.CrateOpenData
 import com.dawnshade.biteforce.bitecrates.integrations.ModIntegration
+import com.dawnshade.biteforce.bitecrates.core.CratesManager.openAllCratesWithKeys
 import com.dawnshade.biteforce.bitecrates.core.CratesManager.openCrate
 import com.dawnshade.biteforce.bitecrates.core.CratesManager.previewCrate
 import com.dawnshade.biteforce.bitecrates.util.Utils
@@ -94,7 +95,11 @@ class BILCrateData(
             element.setHandler(object : InteractionHandler {
                 override fun interactAt(player: ServerPlayer, hand: InteractionHand, pos: Vec3) {
                     asyncScope.launch {
-                        openCrate(player, instance.crate, CrateOpenData(instance.dimPos, null), false)
+                        if (player.isShiftKeyDown) {
+                            openAllCratesWithKeys(player, instance.crate, CrateOpenData(instance.dimPos, null))
+                        } else {
+                            openCrate(player, instance.crate, CrateOpenData(instance.dimPos, null), false)
+                        }
                     }
                 }
 

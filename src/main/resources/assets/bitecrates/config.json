@@ -1,7 +1,7 @@
 {
   "debug": true,
   "interaction_limiter": 1000,
-  "max_openers_per_crate": 1,
+  "max_openers_per_crate": 0,
   "item_rewards_use_display_name": false,
   "keys": {
     "aliases": [
