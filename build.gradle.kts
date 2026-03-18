@@ -13,7 +13,7 @@ version = project.properties["mod_version"].toString()
 group = project.properties["mod_group"].toString()
 
 val modName = project.properties["mod_name"].toString()
-base.archivesName.set(modName)
+base.archivesName.set(modId)
 
 val minecraftVersion = project.properties["minecraft_version"].toString()
 
@@ -141,14 +141,6 @@ dependencies {
     modCompileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 }
 
-tasks.processResources {
-    inputs.property("version", version)
-
-    filesMatching("fabric.mod.json") {
-        expand("version" to version)
-    }
-}
-
 publishing {
     publications.create<MavenPublication>("maven") {
         artifactId = base.archivesName.get()
@@ -161,7 +153,9 @@ publishing {
 }
 
 tasks.processResources {
-    inputs.property("mod_version", version)
+    inputs.property("id", modId)
+    inputs.property("version", version)
+    inputs.property("name", modName)
 
     filesMatching("fabric.mod.json") {
         expand("id" to modId, "version" to version, "name" to modName)
@@ -173,7 +167,7 @@ tasks.processResources {
 }
 
 tasks.remapJar {
-    archiveFileName.set("${project.name}-fabric-$minecraftVersion-${project.version}.jar")
+    archiveFileName.set("${modId}-${project.version}.jar")
 }
 
 tasks.withType<JavaCompile> {

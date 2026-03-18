@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "bitecrates",
+  "id": "${id}",
   "version": "${version}",
-  "name": "BiteCrates",
+  "name": "${name}",
   "description": "Crates Mod",
   "authors": [
     "Stampede"
@@ -16,6 +16,6 @@
     "fabricloader": ">=0.16.0",
     "minecraft": ">=1.21.1"
   },
-  "mixins": ["bitecrates.mixins.json"],
-  "accessWidener": "bitecrates.accesswidener"
+  "mixins": ["${id}.mixins.json"],
+  "accessWidener": "${id}.accesswidener"
 }
