@@ -5,6 +5,7 @@ import com.pokeskies.skiescrates.config.block.ModelOptions
 import com.pokeskies.skiescrates.data.CrateInstance
 import com.pokeskies.skiescrates.data.CrateOpenData
 import com.pokeskies.skiescrates.integrations.ModIntegration
+import com.pokeskies.skiescrates.managers.CratesManager.openAllCratesWithKeys
 import com.pokeskies.skiescrates.managers.CratesManager.openCrate
 import com.pokeskies.skiescrates.managers.CratesManager.previewCrate
 import com.pokeskies.skiescrates.utils.Utils
@@ -52,7 +53,11 @@ class BILCrateData(
             element.setHandler(object : InteractionHandler {
                 override fun interactAt(player: ServerPlayer, hand: InteractionHand, pos: Vec3) {
                     asyncScope.launch {
-                        openCrate(player, instance.crate, CrateOpenData(instance.dimPos, null), false)
+                        if (player.isShiftKeyDown) {
+                            openAllCratesWithKeys(player, instance.crate, CrateOpenData(instance.dimPos, null))
+                        } else {
+                            openCrate(player, instance.crate, CrateOpenData(instance.dimPos, null), false)
+                        }
                     }
                 }
 

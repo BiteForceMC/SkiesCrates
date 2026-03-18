@@ -50,9 +50,9 @@ abstract class Reward(
 
     abstract fun getGenericDisplay(): GenericItem
     open fun getDisplayItem(player: ServerPlayer, placeholders: Map<String, String> = emptyMap()): ItemStack {
-        return getGenericDisplay().also {
-            if (it.name == null) it.name = name
-        }.createItemStack(player, placeholders)
+        val displayItem = getGenericDisplay()
+        val fallbackName = if (displayItem.name == null) name else null
+        return displayItem.createItemStack(player, placeholders, fallbackName)
     }
 
     fun canReceive(userData: UserData, crate: Crate): Boolean {

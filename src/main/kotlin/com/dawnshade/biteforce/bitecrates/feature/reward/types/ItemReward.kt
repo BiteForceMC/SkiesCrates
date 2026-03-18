@@ -1,5 +1,6 @@
 package com.dawnshade.biteforce.bitecrates.feature.reward.types
 
+import com.dawnshade.biteforce.bitecrates.config.ConfigManager
 import com.dawnshade.biteforce.bitecrates.config.item.GenericItem
 import com.dawnshade.biteforce.bitecrates.data.Crate
 import com.dawnshade.biteforce.bitecrates.feature.reward.Reward
@@ -19,7 +20,13 @@ class ItemReward(
         if (!super.giveReward(player, crate)) {
             return false
         }
-        player.inventory.placeItemBackInInventory(item.createItemStack(player))
+
+        val stack = if (ConfigManager.CONFIG.itemRewardsUseDisplayName && item.name == null && name.isNotBlank()) {
+            item.createItemStack(player, fallbackName = name)
+        } else {
+            item.createItemStack(player)
+        }
+        player.inventory.placeItemBackInInventory(stack)
         return true
     }
 

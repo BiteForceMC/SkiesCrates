@@ -42,7 +42,11 @@ open class GenericItem(
     @SerializedName(value = "aspects", alternate = ["aspect"])
     val aspects: List<String> = emptyList(),
 ) {
-    fun createItemStack(player: ServerPlayer, placeholders: Map<String, String> = emptyMap()): ItemStack {
+    fun createItemStack(
+        player: ServerPlayer,
+        placeholders: Map<String, String> = emptyMap(),
+        fallbackName: String? = null
+    ): ItemStack {
         val stack = getBaseItem(player, placeholders) ?: return ItemStack(Items.AIR, amount)
 
         if (components != null) {
@@ -78,7 +82,7 @@ open class GenericItem(
             dataComponents.set(DataComponents.CUSTOM_MODEL_DATA, CustomModelData(customModelData))
         }
 
-        name?.let { name ->
+        (name ?: fallbackName)?.let { name ->
             dataComponents.set(
                 DataComponents.ITEM_NAME, Component.empty().setStyle(Style.EMPTY.withItalic(false))
                     .append(TextUtils.parseAllNative(player, name, placeholders)))

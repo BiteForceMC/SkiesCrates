@@ -9,6 +9,7 @@ import com.pokeskies.skiescrates.data.Crate
 import com.pokeskies.skiescrates.data.CrateInstance
 import com.pokeskies.skiescrates.data.CrateOpenData
 import com.pokeskies.skiescrates.data.DimensionalBlockPos
+import com.pokeskies.skiescrates.data.userdata.UserData
 import com.pokeskies.skiescrates.data.opening.inventory.InventoryOpeningAnimation
 import com.pokeskies.skiescrates.data.opening.inventory.InventoryOpeningInstance
 import com.pokeskies.skiescrates.data.opening.world.WorldOpeningAnimation
@@ -43,6 +44,7 @@ import net.minecraft.world.item.component.CustomData
 import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.phys.Vec3
 import java.util.*
+import kotlin.math.min
 
 object CratesManager {
     const val CRATE_IDENTIFIER: String = "${SkiesCrates.MOD_ID}:crate"
@@ -113,7 +115,11 @@ object CratesManager {
             )
             getCrateFromPos(blockPos)?.let { instance ->
                 asyncScope.launch {
-                    openCrate(player, instance.crate, CrateOpenData(blockPos, null), false)
+                    if (player.isShiftKeyDown) {
+                        openAllCratesWithKeys(player, instance.crate, CrateOpenData(blockPos, null))
+                    } else {
+                        openCrate(player, instance.crate, CrateOpenData(blockPos, null), false)
+                    }
                 }
                 return@UseBlockCallback InteractionResult.FAIL
             }
@@ -258,14 +264,23 @@ object CratesManager {
     }
 
     // This method is massive, but it handles a lot of things!
-    suspend fun openCrate(player: ServerPlayer, crate: Crate, openData: CrateOpenData, isForced: Boolean): Boolean {
-        // TODO: Check crate validity
-        interactionLimiter[player.uuid]?.let {
-            if ((it + ConfigManager.CONFIG.interactionLimiter) > System.currentTimeMillis())
-                return false
+    suspend fun openCrate(
+        player: ServerPlayer,
+        crate: Crate,
+        openData: CrateOpenData,
+        isForced: Boolean,
+        ignoreInteractionLimiter: Boolean = false,
+        ignoreCooldown: Boolean = false,
+        forceInstantOpen: Boolean = false
+    ): Boolean {
+        if (!ignoreInteractionLimiter) {
+            interactionLimiter[player.uuid]?.let {
+                if ((it + ConfigManager.CONFIG.interactionLimiter) > System.currentTimeMillis()) {
+                    return false
+                }
+            }
+            interactionLimiter[player.uuid] = System.currentTimeMillis()
         }
-
-        interactionLimiter[player.uuid] = System.currentTimeMillis()
 
         // Check if the player is already opening a crate
         if (OpeningManager.getInstance(player.uuid) != null) {
@@ -328,7 +343,7 @@ object CratesManager {
         val playerData = storage.getUser(player.uuid)
 
         // Check for a cooldown, if one is present
-        if (crate.cooldown > 0) {
+        if (!ignoreCooldown && crate.cooldown > 0) {
             val lastOpened = playerData.getCrateCooldown(crate)
             if (lastOpened != null) {
                 val cooldownTime = lastOpened + (crate.cooldown * 1000)
@@ -542,7 +557,7 @@ object CratesManager {
                 return@withContext false
             }
 
-            if (crate.animation.isEmpty()) {
+            if (forceInstantOpen || crate.animation.isEmpty()) {
                 // TODO: Update this probably. No option for selecting how many
                 val reward = rewardBag.next() ?: run {
                     handleCrateFail(player, crate, openData)
@@ -616,6 +631,172 @@ object CratesManager {
 
             return@withContext true
         }
+    }
+
+    suspend fun openAllCratesWithKeys(player: ServerPlayer, crate: Crate, openData: CrateOpenData): Boolean {
+        if (crate.keys.isEmpty()) {
+            return openCrate(player, crate, openData, false)
+        }
+
+        if (OpeningManager.getInstance(player.uuid) != null) {
+            withContext(MinecraftDispatcher(player.server)) {
+                handleCrateFail(player, crate, openData)
+                Lang.ERROR_ALREADY_OPENING.forEach {
+                    player.sendMessage(TextUtils.parseAllNative(player, crate.parsePlaceholders(it)))
+                }
+            }
+            return false
+        }
+
+        val storage = SkiesCrates.INSTANCE.storage
+        val playerData = storage.getUser(player.uuid)
+
+        val maxByKeys = withContext(MinecraftDispatcher(player.server)) {
+            getMaxOpenCountByKeys(player, playerData, crate)
+        } ?: return false
+
+        if (maxByKeys <= 0) {
+            withContext(MinecraftDispatcher(player.server)) {
+                handleCrateFail(player, crate, openData)
+                Lang.ERROR_MISSING_KEYS.forEach {
+                    player.sendMessage(TextUtils.parseAllNative(player, crate.parsePlaceholders(it)))
+                }
+            }
+            return false
+        }
+
+        var totalToOpen = maxByKeys
+        if (crate.cost != null && crate.cost.amount > 0) {
+            val service = EconomyManager.getService(crate.cost.provider) ?: run {
+                withContext(MinecraftDispatcher(player.server)) {
+                    handleCrateFail(player, crate, openData)
+                    Utils.printError("Crate ${crate.id} has an invalid economy provider '${crate.cost.provider}'. Valid providers are: ${EconomyManager.getServices().keys.joinToString(", ")}")
+                    Lang.ERROR_ECONOMY_PROVIDER.forEach {
+                        player.sendMessage(TextUtils.parseAllNative(player, crate.parsePlaceholders(it)))
+                    }
+                }
+                return false
+            }
+
+            val affordable = (service.balance(player, crate.cost.currency) / crate.cost.amount).toInt()
+            totalToOpen = min(totalToOpen, affordable)
+
+            if (totalToOpen <= 0) {
+                withContext(MinecraftDispatcher(player.server)) {
+                    handleCrateFail(player, crate, openData)
+                    Lang.ERROR_COST.forEach {
+                        player.sendMessage(TextUtils.parseAllNative(player, crate.parsePlaceholders(it)))
+                    }
+                }
+                return false
+            }
+        }
+
+        if (crate.inventorySpace > 0) {
+            val availableSlots = withContext(MinecraftDispatcher(player.server)) {
+                player.inventory.items.count { it.isEmpty }
+            }
+            val requiredSlots = crate.inventorySpace.toLong() * totalToOpen.toLong()
+            if (availableSlots.toLong() < requiredSlots) {
+                withContext(MinecraftDispatcher(player.server)) {
+                    handleCrateFail(player, crate, openData)
+                    Lang.ERROR_INVENTORY_SPACE_BULK.forEach { message ->
+                        player.sendMessage(
+                            TextUtils.parseAllNative(
+                                player,
+                                crate.parsePlaceholders(
+                                    message
+                                        .replace("%required_space%", requiredSlots.toString())
+                                        .replace("%available_space%", availableSlots.toString())
+                                        .replace("%open_amount%", totalToOpen.toString())
+                                )
+                            )
+                        )
+                    }
+                }
+                return false
+            }
+        }
+
+        withContext(MinecraftDispatcher(player.server)) {
+            Lang.CRATE_OPENING_ALL.forEach {
+                player.sendMessage(
+                    TextUtils.parseAllNative(
+                        player,
+                        crate.parsePlaceholders(it.replace("%open_amount%", totalToOpen.toString()))
+                    )
+                )
+            }
+        }
+
+        var openedCount = 0
+        for (openIndex in 0 until totalToOpen) {
+            val opened = openCrate(
+                player,
+                crate,
+                openData,
+                false,
+                ignoreInteractionLimiter = true,
+                ignoreCooldown = true,
+                forceInstantOpen = true
+            )
+            if (!opened) {
+                break
+            }
+            openedCount++
+        }
+
+        return openedCount > 0
+    }
+
+    private fun getMaxOpenCountByKeys(
+        player: ServerPlayer,
+        playerData: UserData,
+        crate: Crate
+    ): Int? {
+        var maxOpenCount = Int.MAX_VALUE
+        for ((keyId, requiredAmount) in crate.keys) {
+            if (requiredAmount <= 0) continue
+
+            val key = ConfigManager.KEYS[keyId] ?: run {
+                Utils.printError("Key $keyId does not exist while bulk opening crate ${crate.id} for ${player.name.string}!")
+                Lang.ERROR_KEY_NOT_FOUND.forEach {
+                    player.sendMessage(TextUtils.parseAllNative(player, crate.parsePlaceholders(it.replace("%key_id%", keyId))))
+                }
+                return null
+            }
+
+            val available = if (key.virtual) {
+                playerData.keys[key.id] ?: 0
+            } else {
+                val rawCount = player.inventory.items
+                    .filter { stack -> !stack.isEmpty && KeyManager.getKeyOrNull(stack)?.id == keyId }
+                    .sumOf { stack -> stack.count }
+
+                if (rawCount <= 0) {
+                    0
+                } else {
+                    var low = 0
+                    var high = rawCount
+                    while (low < high) {
+                        val mid = (low + high + 1) / 2
+                        if (KeyManager.checkPlayerForKeys(player, playerData, key, mid)) {
+                            low = mid
+                        } else {
+                            high = mid - 1
+                        }
+                    }
+                    low
+                }
+            }
+
+            maxOpenCount = min(maxOpenCount, available / requiredAmount)
+            if (maxOpenCount <= 0) {
+                return 0
+            }
+        }
+
+        return if (maxOpenCount == Int.MAX_VALUE) 0 else maxOpenCount
     }
 
     fun previewCrate(player: ServerPlayer, crate: Crate) {

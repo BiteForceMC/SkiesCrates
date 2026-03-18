@@ -832,7 +832,7 @@ object CratesManager {
         }
 
         var openedCount = 0
-        for (_ in 0 until totalToOpen) {
+        for (openIndex in 0 until totalToOpen) {
             val opened = openCrate(
                 player,
                 crate,
