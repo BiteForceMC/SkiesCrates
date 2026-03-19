@@ -52,6 +52,7 @@ object CratesManager {
     // Chunk -> List of Crate Instances in that chunk
     private val instancesByChunk: MutableMap<ChunkKey, MutableMap<DimensionalBlockPos, CrateInstance>> = mutableMapOf()
     private val interactionLimiter = mutableMapOf<UUID, Long>()
+    private var eventsRegistered = false
 
     fun init() {
         // destroy existing instances and load from config
@@ -64,7 +65,10 @@ object CratesManager {
             loadCrate(crate)
         }
 
-        registerEvents()
+        if (!eventsRegistered) {
+            registerEvents()
+            eventsRegistered = true
+        }
     }
 
     fun registerEvents() {
@@ -175,15 +179,14 @@ object CratesManager {
         }
 
         ServerChunkEvents.CHUNK_LOAD.register { level, chunk ->
-            // Filters instances that have bilData but are not attached
-            val unattached = getInstancesAtChunk(level, chunk).filter {
-                it.bilData?.let { bilData -> !bilData.isAttached() } ?: false
+            val needsAttachment = getInstancesAtChunk(level, chunk).filter { instance ->
+                instance.model != null && instance.bilData?.isAttached() != true
             }
 
-            for (instance in unattached) {
-                instance.model?.let { modelOptions ->
-                    instance.bilData = BILCrateData.create(instance, chunk, modelOptions)
-                }
+            for (instance in needsAttachment) {
+                val modelOptions = instance.model ?: continue
+                instance.bilData?.holder?.destroy()
+                instance.bilData = BILCrateData.create(instance, chunk, modelOptions)
             }
         }
     }

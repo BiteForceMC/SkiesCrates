@@ -5,6 +5,7 @@ import com.dawnshade.biteforce.bitecrates.data.Crate
 import com.dawnshade.biteforce.bitecrates.feature.reward.Reward
 import com.dawnshade.biteforce.bitecrates.feature.reward.RewardLimits
 import com.dawnshade.biteforce.bitecrates.feature.reward.RewardType
+import net.minecraft.core.component.DataComponents
 import net.minecraft.server.level.ServerPlayer
 
 class ItemReward(
@@ -20,7 +21,10 @@ class ItemReward(
             return false
         }
 
-        player.inventory.placeItemBackInInventory(item.createItemStack(player))
+        val rewardItem = item.createItemStack(player)
+        rewardItem.remove(DataComponents.CUSTOM_NAME)
+        rewardItem.remove(DataComponents.ITEM_NAME)
+        player.inventory.placeItemBackInInventory(rewardItem)
         return true
     }
 

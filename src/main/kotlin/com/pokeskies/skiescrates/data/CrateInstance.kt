@@ -13,7 +13,6 @@ import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.level.chunk.LevelChunk
 
 class CrateInstance(
     val crate: Crate,
@@ -39,14 +38,16 @@ class CrateInstance(
                 return@let
             }
 
-            var chunk: LevelChunk? = null
-            if (level.isLoaded(pos)) {
-                try {
-                    chunk = level.getChunkAt(pos)
-                } catch (e: Exception) {
-                    Utils.printError("Error while attaching BIL Crate at chunk ${pos}!")
-                    e.printStackTrace()
-                }
+            if (!level.isLoaded(pos)) {
+                return@let
+            }
+
+            val chunk = try {
+                level.getChunkAt(pos)
+            } catch (e: Exception) {
+                Utils.printError("Error while attaching BIL Crate at chunk ${pos}!")
+                SkiesCrates.LOGGER.error("Failed to attach BIL crate at {}", pos, e)
+                return@let
             }
 
             bilData = BILCrateData.create(this, chunk, modelOptions)

@@ -56,6 +56,7 @@ object CratesManager {
     private val instancesByChunk: MutableMap<ChunkKey, MutableMap<DimensionalBlockPos, CrateInstance>> = mutableMapOf()
     private val interactionLimiter = mutableMapOf<UUID, Long>()
     private val playerOpenLocks = ConcurrentHashMap<UUID, Mutex>()
+    private var eventsRegistered = false
 
     fun init() {
         instancesByChunk.values.forEach { chunkInstances ->
@@ -67,7 +68,10 @@ object CratesManager {
             loadCrate(crate)
         }
 
-        registerEvents()
+        if (!eventsRegistered) {
+            registerEvents()
+            eventsRegistered = true
+        }
     }
 
     fun registerEvents() {
@@ -171,14 +175,14 @@ object CratesManager {
         }
 
         ServerChunkEvents.CHUNK_LOAD.register { level, chunk ->
-            val unattached = getInstancesAtChunk(level, chunk).filter {
-                it.bilData?.let { bilData -> !bilData.isAttached() } ?: false
+            val needsAttachment = getInstancesAtChunk(level, chunk).filter { instance ->
+                instance.model != null && instance.bilData?.isAttached() != true
             }
 
-            for (instance in unattached) {
-                instance.model?.let { modelOptions ->
-                    instance.bilData = BILCrateData.create(instance, chunk, modelOptions)
-                }
+            for (instance in needsAttachment) {
+                val modelOptions = instance.model ?: continue
+                instance.bilData?.holder?.destroy()
+                instance.bilData = BILCrateData.create(instance, chunk, modelOptions)
             }
         }
     }
